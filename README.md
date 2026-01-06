@@ -1,131 +1,183 @@
-# Surgical Phase and Tool Recognition
+# 🩺 Surgical Phase & Tool Recognition
 
-This repository implements a multitask deep learning model for laparoscopic surgery video analysis. The model jointly predicts the surgical **phase** and the presence of key **instruments/tools** in short clips, and optionally applies a phase→tool hierarchy to enforce clinically plausible tool predictions.
-
-The codebase includes:
-
-- A ResNet-based multitask architecture (`PhaseToolNet`) with phase-conditional tool prediction
-- Hierarchy-aware masking of tool logits based on the predicted phase
-- Reproducible training and evaluation pipelines
-- A small CLI demo for running inference on a folder of frames
-- A Streamlit app for interactive inspection of model predictions
+A **multitask deep learning framework** for laparoscopic surgery video analysis, jointly recognizing **surgical phases** and **surgical tools** from short temporal windows of frames.
+The system integrates **clinical workflow constraints** through a **phase → tool hierarchy**, improving robustness, interpretability, and practical usability.
 
 ---
 
-## Repository Structure
+## ✨ Highlights
 
-- [app.py](app.py) – Streamlit app for interactive phase/tool recognition on single frames
-- [train.py](train.py) – Training script for `PhaseToolNet` (train/val/test split handling, logging, checkpointing)
-- [evaluate.py](evaluate.py) – Test evaluation from a saved checkpoint with CSV export of metrics
-- [demo.py](demo.py) – Simple CLI demo that runs inference on a folder of frames
-- [config_loader.py](config_loader.py) – YAML configuration loader and device/seed utilities
-- [config.py](config.py) – Backwards-compatible config shim exposing constants from the YAML config
-- [dataset.py](dataset.py) – `MultiTaskWindowDataset` for windowed video clips and label loading
-- [hierarchy.py](hierarchy.py) / [hierarchy/phase_tool_mask.py](hierarchy/phase_tool_mask.py) – Phase→tool validity mask and masking utilities
-- [metrics.py](metrics.py) – Phase and tool metrics (accuracy, confusion matrix, per-tool precision/recall/F1)
-- [models/resnet_multitask.py](models/resnet_multitask.py) – Multitask ResNet backbone and heads
-- [utils/report_utils.py](utils/report_utils.py) – Helpers for exporting figures and tables from notebooks/scripts
-- [configs/final_config.yaml](configs/final_config.yaml) – Single source of truth for paths, hyperparameters, and runtime options
-- [requirements.txt](requirements.txt) – Python dependencies
+* Joint **surgical phase recognition** and **tool detection**
+* Clinically informed **phase-conditioned tool predictions**
+* Temporal window–based video modeling
+* Fully reproducible training and evaluation pipeline
+* Command-line inference and interactive visualization
+* Centralized YAML-based configuration
 
-Notebooks in [notebooks/](notebooks/) illustrate dataset inspection, model behavior, training curves, and final evaluation.
+Designed for **research, benchmarking, and experimental deployment** in surgical workflow understanding.
 
 ---
 
-## Installation
+## 🧠 Conceptual Overview
 
-1. **Clone the repository**
+Laparoscopic procedures follow a well-defined sequence of surgical phases, and only a subset of instruments is clinically plausible within each phase.
+This project exploits that structure by:
 
-   ```bash
-   git clone <YOUR_REPO_URL>
-   cd source_codes
-   ```
+1. Predicting the **current surgical phase**
+2. Using the predicted phase to **constrain tool predictions**
+3. Producing **clinically consistent and interpretable outputs**
 
-2. **Create and activate a Python environment** (recommended)
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # on macOS / Linux
-   # .venv\\Scripts\\activate  # on Windows
-   ```
-
-3. **Install dependencies**
-
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
-
-The code targets a recent PyTorch and torchvision (see versions in `requirements.txt`).
+This design reduces implausible predictions and improves tool detection reliability.
 
 ---
 
-## Dataset and Configuration
+## 🏗️ Repository Structure
 
-All paths and hyperparameters are configured via [configs/final_config.yaml](configs/final_config.yaml) and loaded through [config_loader.py](config_loader.py).
-
-Key entries:
-
-- `data_root`: root directory containing the processed dataset
-- `paths.processed_root`: path (relative to `data_root`) with processed frames
-- `paths.splits_multi_task`: directory (relative to `data_root`) containing the multitask train/test splits
-- `paths.train_manifest` / `paths.test_manifest`: CSV manifests for training and test sets
-- `model.*`: number of phase and tool classes
-- `training.*`: image size, temporal window length, batch size, learning rate, etc.
-- `runtime.device`: device selection (`"cpu"`, `"cuda"`, or `"auto"`)
-- `checkpoint.path`: relative path (from the project root) where the best model checkpoint is saved/loaded
-
-By default, `data_root` points to a folder under your Desktop. Update this field to match the location of your processed dataset before running training or evaluation.
-
-The helper [config.py](config.py) exposes commonly used configuration values as module-level constants for older scripts, but new code should prefer the dict returned by `config_loader.load_config()`.
+```
+.
+├── app.py                     # Streamlit interface for interactive inspection
+├── train.py                   # Training pipeline
+├── evaluate.py                # Test evaluation and metric export
+├── demo.py                    # CLI inference on frame folders
+├── config_loader.py           # YAML loader, seed and device utilities
+├── config.py                  # Backward-compatible config access
+├── dataset.py                 # Temporal multitask dataset
+├── hierarchy/
+│   └── phase_tool_mask.py     # Phase → tool validity definitions
+├── metrics.py                 # Phase and tool evaluation metrics
+├── models/
+│   └── resnet_multitask.py    # Multitask ResNet architecture
+├── utils/
+│   └── report_utils.py        # Reporting helpers
+├── configs/
+│   └── final_config.yaml      # Central configuration file
+├── notebooks/                 # Analysis and visualization notebooks
+└── requirements.txt           # Dependencies
+```
 
 ---
 
-## Training
+## ⚙️ Installation
 
-The main training entry point is [train.py](train.py). It:
+### 1. Clone the repository
 
-- Loads configuration and sets global seeds
-- Builds `MultiTaskWindowDataset` for train/validation/test
-- Computes class weights for the phase loss
-- Trains `PhaseToolNet` with a weighted combination of phase and tool losses
-- Applies the phase→tool hierarchy during tool loss computation
-- Logs epoch-level metrics to `logs/training_log.csv`
-- Saves the best-performing checkpoint (by validation phase accuracy) to the location defined in the config
+```bash
+git clone https://github.com/nouhaila-elmorjani/surgical-phase-tool-detection
+cd surgical-phase-tool-detection
+```
 
-Run training:
+### 2. Create a virtual environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate      # macOS / Linux
+# .venv\Scripts\activate       # Windows
+```
+
+### 3. Install dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+---
+
+## 🗂️ Dataset & Configuration
+
+All paths, hyperparameters, and runtime options are defined in:
+
+```
+configs/final_config.yaml
+```
+
+### Key configuration fields
+
+* **Data**
+
+  * `data_root`: Root directory of the processed dataset
+  * `paths.processed_root`: Directory containing extracted frames
+  * `paths.splits_multi_task`: Train/validation/test splits
+  * `paths.train_manifest`, `paths.test_manifest`: CSV manifests
+
+* **Model**
+
+  * `model.num_phases`
+  * `model.num_tools`
+
+* **Training**
+
+  * `training.window_size`
+  * `training.image_size`
+  * `training.batch_size`
+  * `training.learning_rate`
+  * `training.seed`
+
+* **Runtime**
+
+  * `runtime.device`: `"cpu"`, `"cuda"`, or `"auto"`
+
+* **Checkpoint**
+
+  * `checkpoint.path`: Location of the saved model
+
+⚠️ Update `data_root` before running training or evaluation.
+
+---
+
+## 🚀 Training
+
+Train the model from scratch:
 
 ```bash
 python train.py
 ```
 
-Training progress and metrics (losses, accuracies, tool F1 scores with and without masking) are printed to stdout and logged to CSV.
+The training pipeline:
+
+* Sets global random seeds
+* Builds temporal window datasets
+* Computes class weights to address phase imbalance
+* Optimizes a weighted multitask objective:
+
+  * Phase classification loss
+  * Tool detection loss with hierarchy masking
+* Logs metrics to:
+
+  ```
+  logs/training_log.csv
+  ```
+* Saves the best checkpoint based on **validation phase accuracy**
 
 ---
 
-## Evaluation
+## 📊 Evaluation
 
-Use [evaluate.py](evaluate.py) to evaluate a trained checkpoint on the test split:
+Evaluate a trained model on the test set:
 
 ```bash
 python evaluate.py
 ```
 
-This script:
+This script computes:
 
-- Loads the saved checkpoint specified in [configs/final_config.yaml](configs/final_config.yaml)
-- Computes phase accuracy (overall and per-class) and a confusion matrix
-- Computes tool metrics with and without hierarchy-based masking
-- Prints a detailed summary to stdout
-- Writes:
-  - `logs/eval_summary.csv` – high-level metrics
-  - `logs/eval_tools.csv` – per-tool precision/recall/F1 with and without masking
+* Overall and per-class phase accuracy
+* Phase confusion matrix
+* Tool precision, recall, and F1 scores
+* Tool metrics **with and without hierarchy masking**
+
+Results are written to:
+
+```
+logs/eval_summary.csv
+logs/eval_tools.csv
+```
 
 ---
 
-## CLI Demo
+## 🧪 CLI Inference Demo
 
-The lightweight demo in [demo.py](demo.py) runs inference on a folder of still frames:
+Run inference on a directory of frames:
 
 ```bash
 python demo.py \
@@ -133,39 +185,79 @@ python demo.py \
   --checkpoint path/to/checkpoint.pth
 ```
 
-It prints the predicted phase and the top tools before and after applying the hierarchy-based mask.
-
 ---
 
-## Streamlit App
+## 🖥️ Interactive Streamlit App
 
-[app.py](app.py) provides an interactive Streamlit UI for inspecting predictions frame-by-frame.
-
-Start the app with:
+Launch the interactive interface:
 
 ```bash
 streamlit run app.py
 ```
 
-The app lets you:
+The app allows you to:
 
-- Upload one or more single frames (PNG/JPEG)
-- View predicted phases, full phase probability distributions, and tool probabilities
-- Compare raw vs. hierarchy-masked tool probabilities
-- Inspect the hierarchy mask row corresponding to the predicted phase
-- Visualize the predicted phase timeline across multiple uploaded frames
-
-Ensure that the checkpoint path in [configs/final_config.yaml](configs/final_config.yaml) points to a valid trained model before running the app.
+* Upload one or more frames
+* Inspect phase predictions and probability distributions
+* Compare raw vs hierarchy-masked tool predictions
+* Visualize phase evolution across frames
+* Inspect the active phase → tool validity mask
 
 ---
 
-## Reproducibility
+## 🧩 Model & Hierarchy Design
 
-Reproducibility is handled via:
+### Architecture
 
-- `training.seed` in [configs/final_config.yaml](configs/final_config.yaml)
-- `set_global_seed()` in [config_loader.py](config_loader.py), which seeds Python, NumPy, and PyTorch and enables deterministic algorithms where possible
+* Shared **ResNet** backbone
+* Two task-specific heads:
 
-For strictly reproducible experiments on GPU, you may need to additionally configure CUDA/cuDNN determinism flags according to your hardware and PyTorch version.
+  * **Phase head** (softmax)
+  * **Tool head** (sigmoid)
+
+### Phase → Tool Hierarchy
+
+Clinical constraints are encoded as a **binary validity matrix** defining which tools are plausible in each surgical phase.
+
+The hierarchy is applied:
+
+* **During training**: invalid tools are excluded from the loss
+* **During inference**: tool probabilities are filtered based on the predicted phase
 
 ---
+
+## 🔁 Reproducibility
+
+Reproducibility is supported through:
+
+* Fixed random seeds (Python, NumPy, PyTorch)
+* Centralized YAML configuration
+
+---
+
+## 👤 Author
+
+**ELMORJANI Nouhaila**
+GitHub: [https://github.com/nouhaila-elmorjani](https://github.com/nouhaila-elmorjani)
+
+---
+
+## 🙏 Acknowledgments
+
+This work builds upon and is inspired by prior research and open resources in surgical workflow analysis, including:
+
+* **Surgformer: Surgical Transformer with Hierarchical Temporal Attention for Surgical Phase Recognition**
+  Yang, Shu; Luo, Luyang; Wang, Qiong; Chen, Hao
+  MICCAI 2024 (Open Access)
+  [https://papers.miccai.org/miccai-2024/paper/1220_paper.pdf](https://papers.miccai.org/miccai-2024/paper/1220_paper.pdf)
+  [https://github.com/isyangshu/Surgformer](https://github.com/isyangshu/Surgformer)
+
+* **PhaKIR Dataset – Surgical Phase, Keypoint, and Instrument Recognition**
+  Tobias Rueckert *et al.*
+  MICCAI 2024 / EndoVis Challenge
+  A multi-institutional dataset providing frame-level annotations for surgical phase and instrument recognition, enabling research on temporally consistent surgical scene understanding.
+
+We thank the authors and organizers for making these resources available to the research community.
+
+---
+
