@@ -1,9 +1,0 @@
-phase,accuracy
-Preparation,1.0
-CalotTriangleDissection,0.99
-ClippingCutting,1.0
-GallbladderDissection,1.0
-CleaningCoagulation,0.98
-GallbladderPackaging,1.0
-GallbladderRetraction,0.96
-Undefined,0.78125
